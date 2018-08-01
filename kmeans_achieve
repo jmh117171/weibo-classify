@@ -1,6 +1,8 @@
 # -*- coding=utf-8 -*-
 
 """
+Created on 18-8-1
+@author: minghui_J
 purpose:实现k-means算法
 """
 

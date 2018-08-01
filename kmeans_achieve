@@ -1,0 +1,122 @@
+# -*- coding=utf-8 -*-
+
+"""
+purpose:实现k-means算法
+"""
+
+import numpy as np
+import random
+import matplotlib.pyplot as plt
+
+'''装载数据'''
+def load(data):
+    return np.array(data)
+
+'''计算距离'''
+def calcDis(data,clu,k):
+    clalist=[]  #存放计算距离后的list
+    data=data.tolist()  #转化为列表
+    clu=clu.tolist()
+    for i in range(len(data)):
+        clalist.append([])
+        for j in range(k):
+            dist=round(((data[i][0]-clu[j][0])**2+(data[i][1]-clu[j][1])**2)**0.5,1)
+            clalist[i].append(dist)
+    clalist=np.array(clalist)   #转化为数组
+    return clalist
+
+'''分组'''
+def group(data,clalist,k):
+    grouplist=[]    #存放分组后的集群
+    claList=clalist.tolist()
+    data=data.tolist()
+    for i in range(k):
+        #确定要分组的个数，以空列表的形式，方便下面进行数据的插入
+        grouplist.append([])
+    for j in range(len(claList)):
+        sortNum=np.argsort(claList[j])
+        grouplist[sortNum[0]].append(data[j][:])
+    grouplist=np.array(grouplist)
+    return grouplist
+
+'''计算质心'''
+def calcCen(data,grouplist,k):
+    clunew=[]
+    data=data.tolist()
+    grouplist=grouplist.tolist()
+    for i in range(k):
+        #计算每个组的新质心
+        sumx=0
+        sumy=0
+        for j in range(len(grouplist[i])):
+            sumx+=grouplist[i][j][0]
+            sumy+=grouplist[i][j][1]
+        clunew.append([round(sumx/len(grouplist[i]),1),round(sumy/len(grouplist[i]),1)])
+    clunew=np.array(clunew)
+    return clunew
+
+'''优化质心'''
+def classify(data,clu,k):
+    clalist=calcDis(data,clu,k) #计算样本到质心的距离
+    grouplist=group(data,clalist,k) #分组
+    for i in range(k):
+        #替换空值
+        if grouplist[i]==[]:
+            grouplist[i]=[[random.uniform(0, 5),random.uniform(0, 5)]]
+    clunew=calcCen(data,grouplist,k)
+    sse=clunew-clu
+    # print "the clu is :%r\nthe group is :%r\nthe clunew is :%r\nthe sse is :%r" %(clu,grouplist,clunew,sse)
+    return sse,clunew,data,k,grouplist
+
+def drawPic(clu,group,k):
+    ax=plt.subplot(111)
+    colors = ['b', 'g','c']
+    markers = ['o', 's','D']
+    group=group.tolist()
+    clu=clu.tolist()
+    for i in range(k):
+        for j in range(len(group[i])):
+            ax.scatter(group[i][j][0],group[i][j][1],color=colors[i],marker=markers[i])
+    for m in range(k):
+        ax.scatter(clu[m][0],clu[m][1],color='r',marker='x')
+    plt.show()
+
+
+if __name__=='__main__':
+    k=3 #给出要分类的个数的k值
+    # array=[[3.5,4.8],[2.1,3.3],[4.5,4.5],[10,13],[11,12.5],[3.2,1.1]]
+
+    X = [[0.0888, 0.5885],
+         [0.1399, 0.8291],
+         [0.0747, 0.4974],
+         [0.0983, 0.5772],
+         [0.1276, 0.5703],
+         [0.1671, 0.5835],
+         [0.1906, 0.5276],
+         [0.1061, 0.5523],
+         [0.2446, 0.4007],
+         [0.1670, 0.4770],
+         [0.2485, 0.4313],
+         [0.1227, 0.4909],
+         [0.1240, 0.5668],
+         [0.1461, 0.5113],
+         [0.2315, 0.3788],
+         [0.0494, 0.5590],
+         [0.1107, 0.4799],
+         [0.2521, 0.5735],
+         [0.1007, 0.6318],
+         [0.1067, 0.4326],
+         [0.1956, 0.4280]
+         ]
+    data=load(X) #装载数据
+    # clu=random.sample(data[:,:].tolist(),k)    #随机取质心
+    clu=[]
+    for i in range(k):
+        clu.append([random.uniform(0,10),random.uniform(0,10)])
+    clu=np.array(clu)
+    sse,clunew,data,k,grouplist=classify(data,clu,k)
+    while np.any(sse!=0):
+        sse,clunew,data,k,grouplist=classify(data,clunew,k)
+    print "the best cluster is %r" %clunew
+    print "the group is %r" %grouplist
+    drawPic(clunew,grouplist,k)

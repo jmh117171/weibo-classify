@@ -1,0 +1,362 @@
+#-*-coding:utf-8 -*-
+'''
+Created on 18-8-3
+@author: minghui_J
+lat、lon、time、emo的聚类
+方法是用emo_score_average
+输出总的6类各有多少
+可视化聚类的结果、并输出每个簇里面emo的平均值，6个category的数量
+'''
+import pymysql
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+def query_all(cur, query):
+    cur.execute(query)
+    return cur.fetchall()
+
+def GetDist(lon_temp_ZP, lon_temp_P2_ZP, lon_temp_P3, lat_temp_ZP, lat_temp_P2_ZP, lat_temp_P3, lon_ZP, lon_P2_ZP, lon_P3, lat_ZP, lat_P2_ZP, lat_P3):
+
+    # The Company used below is "KiloMeter"
+    dist_P1_lon_sq = ((lon_temp_ZP - lon_ZP) * 111)**2
+    dist_P2_lon_sq = ((lon_temp_P2_ZP - lon_P2_ZP) * 1.85)**2
+    dist_P3_lon_sq = ((lon_temp_P3 - lon_P3) * 0.0309)**2
+
+    dist_P1_lat_sq = ((lat_temp_ZP - lat_ZP) * 111) ** 2
+    dist_P2_lat_sq = ((lat_temp_P2_ZP - lat_P2_ZP) * 1.85) ** 2
+    dist_P3_lat_sq = ((lat_temp_P3 - lat_P3) * 0.0309) ** 2
+
+    dis_sum = dist_P1_lon_sq + dist_P2_lon_sq + dist_P3_lon_sq + dist_P1_lat_sq + dist_P2_lat_sq + dist_P3_lat_sq
+
+    return dis_sum
+
+def Transfer2TimeType(lon_temp, lat_temp):
+
+    # Part1 Used
+    lon_temp_ZP = int(lon_temp) # Get The Main Number Part
+    lat_temp_ZP = int(lat_temp) # Get The Main Number Part
+
+    lon_temp_minP = (lon_temp - lon_temp_ZP) * 60
+    lat_temp_minP = (lat_temp - lat_temp_ZP) * 60
+
+    # Big letter 'P' refers to the Word "Part"
+    # Part2 Used
+    lon_P2_ZP = int(lon_temp_minP)
+    lat_P2_ZP = int(lat_temp_minP)
+
+    lon_P2_minP = lon_temp_minP - lon_P2_ZP
+    lat_P2_minP = lat_temp_minP - lat_P2_ZP
+
+    # Part3 Used
+    lon_P3 = lon_P2_minP * 60
+    lat_P3 = lat_P2_minP * 60
+
+    return lon_temp_ZP, lon_P2_ZP, lon_P3, lat_temp_ZP, lat_P2_ZP, lat_P3
+
+def getData(data_lat,data_lon,data_time,data_emo,data_type):
+    conn = pymysql.connect(host='localhost', port=3306, user='root', passwd='JMHjmh1998', db='weibodata', charset='utf8')
+    cur=conn.cursor()
+    query = 'select lat,lon,score,time,emotion_label,tag_ids from d_new_textEmotion where emotion_label!="None"'
+    arr = query_all(cur,query)
+    cur.close()
+    conn.close()
+    positive=0
+    neutal=0
+    negative=0
+    for key in arr:
+        time=(float(str(key[3]).split(':')[0])) + (float(str(key[3]).split(':')[1]) / 60) + (
+                float(str(key[3]).split(':')[2]) / 3600)
+        if key[4]=='0':
+            if negative==1000:
+                continue
+            data_lat.append(float(key[0]))
+            data_lon.append(float(key[1]))
+            data_time.append(time)
+            data_emo.append(1-float(key[2]))
+            data_type.append(str(key[5]))
+            negative+=1
+        if key[4]=='1':
+            if neutal==1000:
+                continue
+            data_lat.append(float(key[0]))
+            data_lon.append(float(key[1]))
+            data_time.append(time)
+            data_emo.append(float(0.5))
+            data_type.append(str(key[5]))
+            neutal+=1
+        if key[4]=='2':
+            if positive==1000:
+                continue
+            data_lat.append(float(key[0]))
+            data_lon.append(float(key[1]))
+            data_time.append(time)
+            data_emo.append(float(key[2]))
+            data_type.append(str(key[5]))
+            positive+=1
+    return (data_lat,data_lon,data_time,data_emo,data_type)
+
+def normalization(lat,lon,time):
+    normal_lat=[]
+    normal_lon=[]
+    normal_time=[]
+    for i in range(len(lat)):
+        max_lat=max(lat)
+        min_lat=min(lat)
+        normal_lat.append((float(lat[i]-min_lat))/(float(max_lat-min_lat)))
+        max_lon=max(lon)
+        min_lon=min(lon)
+        normal_lon.append((float(lon[i]-min_lon))/(float(max_lon-min_lon)))
+        max_time=max(time)
+        min_time=min(time)
+        normal_time.append((float(time[i]-min_time))/(float(max_time-min_time)))
+    return normal_lat,normal_lon,normal_time
+
+def useKmeans(lat,lon,time,emo,k):
+    data=np.array(list(zip(lat,lon,time,emo))).reshape(len(lat),4)
+    estimator = KMeans(n_clusters=k)
+    kmeans=estimator.fit(data)
+    labels = kmeans.labels_
+    center = kmeans.cluster_centers_
+    print "center:"
+    print center
+    return labels
+
+def groupList(labels,lat,lon,time,emo,category,k):
+    lat_result = []
+    lon_result = []
+    time_result = []
+    emo_score= []
+    category_result=[]
+    for i in range(k):
+        lat_result.append([])
+        lon_result.append([])
+        time_result.append([])
+        emo_score.append([])
+        category_result.append([])
+    for i,l in enumerate(labels):
+        lat_result[l].append(lat[i])
+        lon_result[l].append(lon[i])
+        time_result[l].append(time[i])
+        emo_score[l].append(emo[i])
+        category_result[l].append(category[i])
+    return lat_result,lon_result,time_result,emo_score,category_result
+
+def drawPic(lat_result,lon_result,time_result,colors,markers,labels,k):
+    ax = plt.subplot(111, projection='3d')
+    for i in range(k):
+        plot1 = ax.scatter(np.array(lat_result[i]), np.array(lon_result[i]), np.array(time_result[i]), color=colors[i],
+                       marker=markers[i], alpha=0.5,label=labels[i])
+    # plot2 = ax.scatter(np.array(lat_result[1]), np.array(lon_result[1]), np.array(time_result[1]), color='b',
+    #                    marker='o', alpha=0.5)
+    # plot3 = ax.scatter(np.array(lat_result[2]), np.array(lon_result[2]), np.array(time_result[2]), color='g',
+    #                    marker='*', alpha=0.5)
+    # plt.legend(plot1, plot2, plot3,labels=['A', 'B', 'C'])
+    plt.legend()
+    ax.set_zlabel('time')
+    ax.set_ylabel('lon')
+    ax.set_xlabel('lat')
+    plt.show()
+
+def getEmoScore(emo_score):
+    emo_average_score = 0
+    for i in range(len(emo_score)):
+        for key in emo_score[i]:
+            emo_average_score += float(key)
+        emo_average_score /= len(emo_score[i])
+        print "%d emo_average_score" % i, " ", emo_average_score
+        emo_average_score = 0
+
+def analysis(lat_result,lon_result,time_result,emo_score,category_result,k):
+    emo1 = []
+    emo2 = []
+    emo3 = []
+    emo4 = []
+    emo5 = []
+    result=[]
+    food=life=school=outdoor=entertainment=travel=0
+    for i in range(k):
+        food = life = school = outdoor = entertainment = travel = 0
+        for j in range(len(emo_score[i])):
+            if 0<=emo_score[i][j]<0.2:
+                emo1.append([lat_result[i][j],lon_result[i][j],time_result[i][j],emo_score[i][j],category_result[i][j]])
+            if 0.2<=emo_score[i][j]<0.4:
+                emo2.append([lat_result[i][j],lon_result[i][j],time_result[i][j],emo_score[i][j],category_result[i][j]])
+            if 0.4<=emo_score[i][j]<0.6:
+                emo3.append([lat_result[i][j],lon_result[i][j],time_result[i][j],emo_score[i][j],category_result[i][j]])
+            if 0.6<=emo_score[i][j]<0.8:
+                emo4.append([lat_result[i][j],lon_result[i][j],time_result[i][j],emo_score[i][j],category_result[i][j]])
+            if 0.8<=emo_score[i][j]<1:
+                emo5.append([lat_result[i][j],lon_result[i][j],time_result[i][j],emo_score[i][j],category_result[i][j]])
+        # line=[emo1,emo2,emo3,emo4,emo5]
+        print len(emo1),len(emo2),len(emo3),len(emo4),len(emo5)
+        for key in emo1:
+            if key[4]=='1':
+                food+=1
+            if key[4]=='2':
+                life+=1
+            if key[4]=='3':
+                school+=1
+            if key[4]=='4':
+                outdoor+=1
+            if key[4]=='5':
+                entertainment+=1
+            if key[4]=='6':
+                travel+=1
+        print "food:",food
+        print "life:",life
+        print "school:",school
+        print "outdoor:",outdoor
+        print "entertainment:",entertainment
+        print "travel:",travel
+
+        food = life = school = outdoor = entertainment = travel = 0
+        for key in emo2:
+            if key[4]=='1':
+                food+=1
+            if key[4]=='2':
+                life+=1
+            if key[4]=='3':
+                school+=1
+            if key[4]=='4':
+                outdoor+=1
+            if key[4]=='5':
+                entertainment+=1
+            if key[4]=='6':
+                travel+=1
+            # print "lat", " ", key[0]
+            # print "lon", " ", key[1]
+            # print "time", " ", key[2]
+            # print "score", " ", key[3]
+            # print "category", " ", key[4]
+        print "food:",food
+        print "life:",life
+        print "school:",school
+        print "outdoor:",outdoor
+        print "entertainment:",entertainment
+        print "travel:",travel
+
+        food = life = school = outdoor = entertainment = travel = 0
+        for key in emo3:
+            if key[4] == '1':
+                food += 1
+            if key[4] == '2':
+                life += 1
+            if key[4] == '3':
+                school += 1
+            if key[4] == '4':
+                outdoor += 1
+            if key[4] == '5':
+                entertainment += 1
+            if key[4] == '6':
+                travel += 1
+            # print "lat", " ", key[0]
+            # print "lon", " ", key[1]
+            # print "time", " ", key[2]
+            # print "score", " ", key[3]
+            # print "category", " ", key[4]
+        print "food:", food
+        print "life:", life
+        print "school:", school
+        print "outdoor:", outdoor
+        print "entertainment:", entertainment
+        print "travel:", travel
+
+        food = life = school = outdoor = entertainment = travel = 0
+        for key in emo4:
+            if key[4] == '1':
+                food += 1
+            if key[4] == '2':
+                life += 1
+            if key[4] == '3':
+                school += 1
+            if key[4] == '4':
+                outdoor += 1
+            if key[4] == '5':
+                entertainment += 1
+            if key[4] == '6':
+                travel += 1
+            # print "lat", " ", key[0]
+            # print "lon", " ", key[1]
+            # print "time", " ", key[2]
+            # print "score", " ", key[3]
+            # print "category", " ", key[4]
+        print "food:", food
+        print "life:", life
+        print "school:", school
+        print "outdoor:", outdoor
+        print "entertainment:", entertainment
+        print "travel:", travel
+
+        food = life = school = outdoor = entertainment = travel = 0
+        for key in emo5:
+            if key[4] == '1':
+                food += 1
+            if key[4] == '2':
+                life += 1
+            if key[4] == '3':
+                school += 1
+            if key[4] == '4':
+                outdoor += 1
+            if key[4] == '5':
+                entertainment += 1
+            if key[4] == '6':
+                travel += 1
+            # print "lat", " ", key[0]
+            # print "lon", " ", key[1]
+            # print "time", " ", key[2]
+            # print "score", " ", key[3]
+            # print "category", " ", key[4]
+        print "food:", food
+        print "life:", life
+        print "school:", school
+        print "outdoor:", outdoor
+        print "entertainment:", entertainment
+        print "travel:", travel
+
+        result.append([emo1,emo2,emo3,emo4,emo5])
+        emo1 = []
+        emo2 = []
+        emo3 = []
+        emo4 = []
+        emo5 = []
+    return result
+
+
+if __name__=='__main__':
+    lat=[]
+    lon=[]
+    time=[]
+    category=[]
+    emo=[]
+    getData(lat,lon,time,emo,category)
+    food=life=school=outdoor=entertainment=travel=0
+    for key in category:
+        if key=='1':
+            food+=1
+        if key=='2':
+            life+=1
+        if key=='3':
+            school+=1
+        if key=='4':
+            outdoor+=1
+        if key=='5':
+            entertainment+=1
+        if key=='6':
+            travel+=1
+    print "food:",food
+    print "life:",life
+    print "school:",school
+    print "outdoor:",outdoor
+    print "entertainment:",entertainment
+    print "travel:",travel
+    normal_lat,normal_lon,normal_time=normalization(lat,lon,time)
+    labels=useKmeans(normal_lat,normal_lon,normal_time,emo,k=8)
+    lat_result,lon_result,time_result,emo_score,category_result=groupList(labels,lat,lon,time,emo,category,k=8)
+
+    colors=['b', 'g', 'r','c','m','y','k','pink','grey','greenyellow']
+    markers=['o', 's', 'D','v', '^','+','*','|','_','8']
+    labels=['A','B','C','D','E','F','G','H','I','J']
+    getEmoScore(emo_score)
+    result=analysis(lat_result,lon_result,time_result,emo_score,category_result,k=8)
+    drawPic(lat_result,lon_result,time_result,colors,markers,labels,k=8)

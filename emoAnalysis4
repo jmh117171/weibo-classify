@@ -240,21 +240,71 @@ def classes_negative(data_lat,data_lon,data_time,data_emo,data_type):
            lat_school_result, lon_school_result,emo_school_result, lat_outdoor_result, lon_outdoor_result, emo_outdoor_result,\
            lat_entertainment_result, lon_entertainment_result,emo_entertainment_result, lat_travel_result, lon_travel_result,emo_travel_result
 
+def classes_category(data_lat,data_lon,data_time,data_emo,data_type):
+    lat_food_result = []
+    lat_life_result = []
+    lat_school_result = []
+    lat_outdoor_result = []
+    lat_entertainment_result = []
+    lat_travel_result = []
+    lon_food_result = []
+    lon_life_result = []
+    lon_school_result = []
+    lon_outdoor_result = []
+    lon_entertainment_result = []
+    lon_travel_result = []
+    # time_food_result=time_life_result=time_school_result=time_outdoor_result=time_entertainment_result=time_travel_result=[]
+    emo_food_result = []
+    emo_life_result = []
+    emo_school_result = []
+    emo_outdoor_result = []
+    emo_entertainment_result = []
+    emo_travel_result = []
+    # category_food_result=category_life_result=category_school_result=category_outdoor_result=category_entertainment_result=category_travel_result=[]
+    for i in range(len(data_lat)):
+        if data_type[i] == '1':
+            lat_food_result.append(data_lat[i])
+            lon_food_result.append(data_lon[i])
+            emo_food_result.append(data_emo[i])
+            # time_food_result.append(data_time[i])
+            # emo_food_result.append(data_emo[i])
+        if data_type[i] == '2':
+            lat_life_result.append(data_lat[i])
+            lon_life_result.append(data_lon[i])
+            emo_life_result.append(data_emo[i])
+            # time_life_result.append(data_time[i])
+            # emo_life_result.append(data_emo[i])
+        if data_type[i] == '3':
+            lat_school_result.append(data_lat[i])
+            lon_school_result.append(data_lon[i])
+            emo_school_result.append(data_emo[i])
+            # time_school_result.append(data_time[i])
+            # emo_school_result.append(data_emo[i])
+        if data_type[i] == '4':
+            lat_outdoor_result.append(data_lat[i])
+            lon_outdoor_result.append(data_lon[i])
+            emo_outdoor_result.append(data_emo[i])
+            # time_outdoor_result.append(data_time[i])
+            # emo_outdoor_result.append(data_emo[i])
+        if data_type[i] == '5':
+            lat_entertainment_result.append(data_lat[i])
+            lon_entertainment_result.append(data_lon[i])
+            emo_entertainment_result.append(data_emo[i])
+            # time_entertainment_result.append(data_time[i])
+            # emo_entertainment_result.append(data_emo[i])
+        if data_type[i] == '6':
+            lat_travel_result.append(data_lat[i])
+            lon_travel_result.append(data_lon[i])
+            emo_travel_result.append(data_emo[i])
+            # time_travel_result.append(data_time[i])
+            # emo_travel_result.append(data_emo[i])
+    return lat_food_result, lon_food_result, emo_food_result, lat_life_result, lon_life_result, emo_life_result, \
+           lat_school_result, lon_school_result, emo_school_result, lat_outdoor_result, lon_outdoor_result, emo_outdoor_result, \
+           lat_entertainment_result, lon_entertainment_result, emo_entertainment_result, lat_travel_result, lon_travel_result, emo_travel_result
 
-if __name__=='__main__':
-    lat=[]
-    lon=[]
-    time=[]
-    category=[]
-    emo=[]
-    getData(lat,lon,time,emo,category)
-    lat_food_result, lon_food_result,emo_food_result, lat_life_result, lon_life_result, emo_life_result,\
-    lat_school_result, lon_school_result,emo_school_result, lat_outdoor_result, lon_outdoor_result, emo_outdoor_result,\
-    lat_entertainment_result, lon_entertainment_result, emo_entertainment_result,lat_travel_result, lon_travel_result,emo_travel_result=classes_neutal(lat,lon,time,emo,category)
-
-    '''
-    将一种情绪的6个类别写入excel中
-    '''
+def diff_emo_importToExcel( lat_food_result, lon_food_result, lat_life_result, lon_life_result,
+    lat_school_result, lon_school_result, lat_outdoor_result, lon_outdoor_result,
+    lat_entertainment_result, lon_entertainment_result, lat_travel_result, lon_travel_result,type):
     f = xlwt.Workbook()
     sheet1 = f.add_sheet('food', cell_overwrite_ok=True)
     sheet1.write(0,0,"lat")
@@ -303,7 +353,137 @@ if __name__=='__main__':
         sheet1.write(i+1, 0,lat_travel_result[i])
         sheet1.write(i+1, 1,lon_travel_result[i])
     print "write over travel"
-    f.save('F:\\neutal.xls')
+    f.save('F:\\%s.xls' %type)
+
+    print len(lat_food_result), " ", len(lon_food_result)
+    print len(lat_life_result), " ", len(lon_life_result)
+    print len(lat_school_result), " ", len(lon_school_result)
+    print len(lat_outdoor_result), " ", len(lon_outdoor_result)
+    print len(lat_entertainment_result), " ", len(lat_entertainment_result)
+    print len(lat_travel_result), " ", len(lat_travel_result)
+
+def diff_category_importToExcel( lat_food_result, lon_food_result,emo_food_result, lat_life_result, lon_life_result,emo_life_result,
+    lat_school_result, lon_school_result,emo_school_result, lat_outdoor_result, lon_outdoor_result,emo_outdoor_result,
+    lat_entertainment_result, lon_entertainment_result,emo_entertainment_result, lat_travel_result, lon_travel_result,emo_travel_result,type):
+    f = xlwt.Workbook()
+    sheet1 = f.add_sheet('food', cell_overwrite_ok=True)
+    sheet1.write(0, 0, "lat")
+    sheet1.write(0, 1, "lon")
+    sheet1.write(0, 2, "count")
+    for i in range(len(lat_food_result)):
+        sheet1.write(i + 1, 0, lat_food_result[i])
+        sheet1.write(i + 1, 1, lon_food_result[i])
+        sheet1.write(i + 1, 2, emo_food_result[i] * 1000)
+    print "write over food"
+
+    sheet1 = f.add_sheet('life', cell_overwrite_ok=True)
+    sheet1.write(0, 0, "lat")
+    sheet1.write(0, 1, "lon")
+    sheet1.write(0, 2, "count")
+    for i in range(len(lat_life_result)):
+        sheet1.write(i + 1, 0, lat_life_result[i])
+        sheet1.write(i + 1, 1, lon_life_result[i])
+        sheet1.write(i + 1, 2, emo_life_result[i] * 1000)
+    print "write over life"
+
+    sheet1 = f.add_sheet('school', cell_overwrite_ok=True)
+    sheet1.write(0, 0, "lat")
+    sheet1.write(0, 1, "lon")
+    sheet1.write(0, 2, "count")
+    for i in range(len(lat_school_result)):
+        sheet1.write(i + 1, 0, lat_school_result[i])
+        sheet1.write(i + 1, 1, lon_school_result[i])
+        sheet1.write(i + 1, 2, emo_school_result[i] * 1000)
+    print "write over school"
+
+    sheet1 = f.add_sheet('outdoor', cell_overwrite_ok=True)
+    sheet1.write(0, 0, "lat")
+    sheet1.write(0, 1, "lon")
+    sheet1.write(0, 2, "count")
+    for i in range(len(lat_outdoor_result)):
+        sheet1.write(i + 1, 0, lat_outdoor_result[i])
+        sheet1.write(i + 1, 1, lon_outdoor_result[i])
+        sheet1.write(i + 1, 2, emo_outdoor_result[i] * 1000)
+    print "write over outdoor"
+
+    sheet1 = f.add_sheet('entertainment', cell_overwrite_ok=True)
+    sheet1.write(0, 0, "lat")
+    sheet1.write(0, 1, "lon")
+    sheet1.write(0, 2, "count")
+    for i in range(len(lat_entertainment_result)):
+        sheet1.write(i + 1, 0, lat_entertainment_result[i])
+        sheet1.write(i + 1, 1, lon_entertainment_result[i])
+        sheet1.write(i + 1, 2, emo_entertainment_result[i] * 1000)
+    print "write over entertainment"
+
+    sheet1 = f.add_sheet('travel', cell_overwrite_ok=True)
+    sheet1.write(0, 0, "lat")
+    sheet1.write(0, 1, "lon")
+    sheet1.write(0, 2, "count")
+    for i in range(len(lat_travel_result)):
+        sheet1.write(i + 1, 0, lat_travel_result[i])
+        sheet1.write(i + 1, 1, lon_travel_result[i])
+        sheet1.write(i + 1, 2, emo_travel_result[i] * 1000)
+    print "write over travel"
+    f.save('F:\\%s.xls' %type)
+
+    print len(lat_food_result), " ", len(lon_food_result), " ", len(emo_food_result)
+    print len(lat_life_result), " ", len(lon_life_result), " ", len(emo_life_result)
+    print len(lat_school_result), " ", len(lon_school_result), " ", len(emo_school_result)
+    print len(lat_outdoor_result), " ", len(lon_outdoor_result), " ", len(emo_outdoor_result)
+    print len(lat_entertainment_result), " ", len(lat_entertainment_result), " ", len(emo_entertainment_result)
+    print len(lat_travel_result), " ", len(lat_travel_result), " ", len(emo_travel_result)
+
+
+if __name__=='__main__':
+    lat=[]
+    lon=[]
+    time=[]
+    category=[]
+    emo=[]
+    getData(lat,lon,time,emo,category)
+
+    '''
+    将三种情绪的6个类别写入excel中
+    '''
+    lat_food_result, lon_food_result, emo_food_result, lat_life_result, lon_life_result, emo_life_result, \
+    lat_school_result, lon_school_result, emo_school_result, lat_outdoor_result, lon_outdoor_result, emo_outdoor_result, \
+    lat_entertainment_result, lon_entertainment_result, emo_entertainment_result, lat_travel_result, lon_travel_result, emo_travel_result = classes_neutal(lat, lon, time, emo, category)
+
+    diff_emo_importToExcel(lat_food_result, lon_food_result,lat_life_result, lon_life_result,
+                        lat_school_result, lon_school_result,lat_outdoor_result, lon_outdoor_result,
+                        lat_entertainment_result, lon_entertainment_result,lat_travel_result, lon_travel_result,"neutal")
+
+    lat_food_result, lon_food_result, emo_food_result, lat_life_result, lon_life_result, emo_life_result, \
+    lat_school_result, lon_school_result, emo_school_result, lat_outdoor_result, lon_outdoor_result, emo_outdoor_result, \
+    lat_entertainment_result, lon_entertainment_result, emo_entertainment_result, lat_travel_result, lon_travel_result, emo_travel_result = classes_negative(lat, lon, time, emo, category)
+
+    diff_emo_importToExcel(lat_food_result, lon_food_result, lat_life_result, lon_life_result,
+                           lat_school_result, lon_school_result, lat_outdoor_result, lon_outdoor_result,
+                           lat_entertainment_result, lon_entertainment_result, lat_travel_result, lon_travel_result,
+                           "negative")
+
+    lat_food_result, lon_food_result, emo_food_result, lat_life_result, lon_life_result, emo_life_result, \
+    lat_school_result, lon_school_result, emo_school_result, lat_outdoor_result, lon_outdoor_result, emo_outdoor_result, \
+    lat_entertainment_result, lon_entertainment_result, emo_entertainment_result, lat_travel_result, lon_travel_result, emo_travel_result = classes_positive(lat, lon, time, emo, category)
+
+    diff_emo_importToExcel(lat_food_result, lon_food_result, lat_life_result, lon_life_result,
+                           lat_school_result, lon_school_result, lat_outdoor_result, lon_outdoor_result,
+                           lat_entertainment_result, lon_entertainment_result, lat_travel_result, lon_travel_result,
+                           "positive")
+
+
+    '''
+    6种类别分类，写入excel lat、lon、emo_score作为热力图数据
+    '''
+    lat_food_result, lon_food_result, emo_food_result, lat_life_result, lon_life_result, emo_life_result, \
+    lat_school_result, lon_school_result, emo_school_result, lat_outdoor_result, lon_outdoor_result, emo_outdoor_result, \
+    lat_entertainment_result, lon_entertainment_result, emo_entertainment_result, lat_travel_result, lon_travel_result, emo_travel_result = classes_category(lat, lon, time, emo, category)
+
+    diff_category_importToExcel(lat_food_result, lon_food_result,emo_food_result, lat_life_result, lon_life_result,emo_life_result,
+                           lat_school_result, lon_school_result,emo_school_result, lat_outdoor_result, lon_outdoor_result,emo_outdoor_result,
+                           lat_entertainment_result, lon_entertainment_result,emo_entertainment_result, lat_travel_result, lon_travel_result,emo_travel_result,"all_location")
+
 
     '''
     将lat、lon以json格式写入txt，用在百度地图可视化
@@ -318,12 +498,4 @@ if __name__=='__main__':
     #     out1.writelines('{'+'"lat":' +str(lat[i])+','+'"lng":'+str(lon[i])+','+'"count":'+str(emo[i]*1000)+'}'+',')
     # print ("write over")
     # out1.close()
-
-    # print len(lat_food_result)," ",len(lon_food_result)
-    # print len(lat_life_result)," ",len(lon_life_result)
-    # print len(lat_school_result)," ",len(lon_school_result)
-    # print len(lat_outdoor_result)," ",len(lon_outdoor_result)
-    # print len(lat_entertainment_result)," ",len(lat_entertainment_result)
-    # print len(lat_travel_result)," ",len(lat_travel_result)
-
 

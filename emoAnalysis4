@@ -1,0 +1,329 @@
+#-*-coding:utf-8 -*-
+'''
+Created on 18-8-4
+@author: minghui_J
+lat、lon、time、emo的聚类
+方法是用emo_score_average
+可视化positive在20：00-24：00
+      negative在6：00-10：00
+      neutal在剩余时间
+      6个类别的位置分布
+'''
+import pymysql
+import xlwt
+
+
+def query_all(cur, query):
+    cur.execute(query)
+    return cur.fetchall()
+
+def getData(data_lat,data_lon,data_time,data_emo,data_type):
+    conn = pymysql.connect(host='localhost', port=3306, user='root', passwd='JMHjmh1998', db='weibodata', charset='utf8')
+    cur=conn.cursor()
+    query = 'select lat,lon,score,time,emotion_label,tag_ids from d_new_textEmotion where emotion_label!="None"'
+    arr = query_all(cur,query)
+    cur.close()
+    conn.close()
+    positive=0
+    neutal=0
+    negative=0
+    for key in arr:
+        time=(float(str(key[3]).split(':')[0])) + (float(str(key[3]).split(':')[1]) / 60) + (
+                float(str(key[3]).split(':')[2]) / 3600)
+        if key[4]=='0':
+            if negative==1000:
+                continue
+            data_lat.append(float(key[0]))
+            data_lon.append(float(key[1]))
+            data_time.append(time)
+            data_emo.append(1-float(key[2]))
+            data_type.append(str(key[5]))
+            negative+=1
+        if key[4]=='1':
+            if neutal==1000:
+                continue
+            data_lat.append(float(key[0]))
+            data_lon.append(float(key[1]))
+            data_time.append(time)
+            data_emo.append(float(0.5))
+            data_type.append(str(key[5]))
+            neutal+=1
+        if key[4]=='2':
+            if positive==1000:
+                continue
+            data_lat.append(float(key[0]))
+            data_lon.append(float(key[1]))
+            data_time.append(time)
+            data_emo.append(float(key[2]))
+            data_type.append(str(key[5]))
+            positive+=1
+    return (data_lat,data_lon,data_time,data_emo,data_type)
+
+def classes_positive(data_lat,data_lon,data_time,data_emo,data_type):
+    lat_food_result=[]
+    lat_life_result=[]
+    lat_school_result=[]
+    lat_outdoor_result=[]
+    lat_entertainment_result=[]
+    lat_travel_result=[]
+    lon_food_result=[]
+    lon_life_result=[]
+    lon_school_result=[]
+    lon_outdoor_result=[]
+    lon_entertainment_result=[]
+    lon_travel_result=[]
+    # time_food_result=time_life_result=time_school_result=time_outdoor_result=time_entertainment_result=time_travel_result=[]
+    emo_food_result=[]
+    emo_life_result=[]
+    emo_school_result=[]
+    emo_outdoor_result=[]
+    emo_entertainment_result=[]
+    emo_travel_result=[]
+    # category_food_result=category_life_result=category_school_result=category_outdoor_result=category_entertainment_result=category_travel_result=[]
+    for i in range(len(data_lat)):
+        if data_emo[i] > 0.5 and data_type[i] == '1' and data_time[i] > 20:
+            lat_food_result.append(data_lat[i])
+            lon_food_result.append(data_lon[i])
+            emo_food_result.append(data_emo[i])
+            # time_food_result.append(data_time[i])
+            # emo_food_result.append(data_emo[i])
+        if data_emo[i] > 0.5 and data_type[i] == '2' and data_time[i] > 20:
+            lat_life_result.append(data_lat[i])
+            lon_life_result.append(data_lon[i])
+            emo_life_result.append(data_emo[i])
+            # time_life_result.append(data_time[i])
+            # emo_life_result.append(data_emo[i])
+        if data_emo[i] > 0.5 and data_type[i] == '3' and data_time[i] > 20:
+            lat_school_result.append(data_lat[i])
+            lon_school_result.append(data_lon[i])
+            emo_school_result.append(data_emo[i])
+            # time_school_result.append(data_time[i])
+            # emo_school_result.append(data_emo[i])
+        if data_emo[i] > 0.5 and data_type[i] == '4' and data_time[i] > 20:
+            lat_outdoor_result.append(data_lat[i])
+            lon_outdoor_result.append(data_lon[i])
+            emo_outdoor_result.append(data_emo[i])
+            # time_outdoor_result.append(data_time[i])
+            # emo_outdoor_result.append(data_emo[i])
+        if data_emo[i] > 0.5 and data_type[i] == '5' and data_time[i] > 20:
+            lat_entertainment_result.append(data_lat[i])
+            lon_entertainment_result.append(data_lon[i])
+            emo_entertainment_result.append(data_emo[i])
+            # time_entertainment_result.append(data_time[i])
+            # emo_entertainment_result.append(data_emo[i])
+        if data_emo[i] > 0.5 and data_type[i] == '6' and data_time[i] > 20:
+            lat_travel_result.append(data_lat[i])
+            lon_travel_result.append(data_lon[i])
+            emo_travel_result.append(data_emo[i])
+            # time_travel_result.append(data_time[i])
+            # emo_travel_result.append(data_emo[i])
+    return lat_food_result,lon_food_result,emo_food_result,lat_life_result,lon_life_result,emo_life_result,\
+            lat_school_result,lon_school_result,emo_school_result,lat_outdoor_result,lon_outdoor_result,emo_outdoor_result,\
+            lat_entertainment_result,lon_entertainment_result,emo_entertainment_result,lat_travel_result,lon_travel_result,emo_travel_result
+
+def classes_neutal(data_lat,data_lon,data_time,data_emo,data_type):
+    lat_food_result = []
+    lat_life_result = []
+    lat_school_result = []
+    lat_outdoor_result = []
+    lat_entertainment_result = []
+    lat_travel_result = []
+    lon_food_result = []
+    lon_life_result = []
+    lon_school_result = []
+    lon_outdoor_result = []
+    lon_entertainment_result = []
+    lon_travel_result = []
+    # time_food_result=time_life_result=time_school_result=time_outdoor_result=time_entertainment_result=time_travel_result=[]
+    emo_food_result=[]
+    emo_life_result=[]
+    emo_school_result=[]
+    emo_outdoor_result=[]
+    emo_entertainment_result=[]
+    emo_travel_result=[]
+    # category_food_result=category_life_result=category_school_result=category_outdoor_result=category_entertainment_result=category_travel_result=[]
+    for i in range(len(data_lat)):
+        if data_emo[i] == 0.5 and data_type[i] == '1' and (0 < data_time[i] < 6 or 10 < data_time[i] < 20):
+            lat_food_result.append(data_lat[i])
+            lon_food_result.append(data_lon[i])
+            # time_food_result.append(data_time[i])
+            emo_food_result.append(data_emo[i])
+        if data_emo[i] == 0.5 and data_type[i] == '2' and (0 < data_time[i] < 6 or 10 < data_time[i] < 20):
+            lat_life_result.append(data_lat[i])
+            lon_life_result.append(data_lon[i])
+            # time_life_result.append(data_time[i])
+            emo_life_result.append(data_emo[i])
+        if data_emo[i] == 0.5 and data_type[i] == '3' and (0 < data_time[i] < 6 or 10 < data_time[i] < 20):
+            lat_school_result.append(data_lat[i])
+            lon_school_result.append(data_lon[i])
+            # time_school_result.append(data_time[i])
+            emo_school_result.append(data_emo[i])
+        if data_emo[i] == 0.5 and data_type[i] == '4' and (0 < data_time[i] < 6 or 10 < data_time[i] < 20):
+            lat_outdoor_result.append(data_lat[i])
+            lon_outdoor_result.append(data_lon[i])
+            # time_outdoor_result.append(data_time[i])
+            emo_outdoor_result.append(data_emo[i])
+        if data_emo[i] == 0.5 and data_type[i] == '5' and (0 < data_time[i] < 6 or 10 < data_time[i] < 20):
+            lat_entertainment_result.append(data_lat[i])
+            lon_entertainment_result.append(data_lon[i])
+            # time_entertainment_result.append(data_time[i])
+            emo_entertainment_result.append(data_emo[i])
+        if data_emo[i] == 0.5 and data_type[i] == '6' and (0 < data_time[i] < 6 or 10 < data_time[i] < 20):
+            lat_travel_result.append(data_lat[i])
+            lon_travel_result.append(data_lon[i])
+            # time_travel_result.append(data_time[i])
+            emo_travel_result.append(data_emo[i])
+    return lat_food_result, lon_food_result, emo_food_result,lat_life_result, lon_life_result,emo_life_result, \
+           lat_school_result, lon_school_result,emo_school_result, lat_outdoor_result, lon_outdoor_result,emo_outdoor_result, \
+           lat_entertainment_result, lon_entertainment_result, emo_entertainment_result,lat_travel_result, lon_travel_result,emo_travel_result
+
+
+def classes_negative(data_lat,data_lon,data_time,data_emo,data_type):
+    lat_food_result = []
+    lat_life_result = []
+    lat_school_result = []
+    lat_outdoor_result = []
+    lat_entertainment_result = []
+    lat_travel_result = []
+    lon_food_result = []
+    lon_life_result = []
+    lon_school_result = []
+    lon_outdoor_result = []
+    lon_entertainment_result = []
+    lon_travel_result = []
+    # time_food_result=time_life_result=time_school_result=time_outdoor_result=time_entertainment_result=time_travel_result=[]
+    emo_food_result=[]
+    emo_life_result=[]
+    emo_school_result=[]
+    emo_outdoor_result=[]
+    emo_entertainment_result=[]
+    emo_travel_result=[]
+    # category_food_result=category_life_result=category_school_result=category_outdoor_result=category_entertainment_result=category_travel_result=[]
+    for i in range(len(data_lat)):
+        if data_emo[i] < 0.5 and data_type[i] == '1' and 6 <= data_time[i] < 10:
+            lat_food_result.append(data_lat[i])
+            lon_food_result.append(data_lon[i])
+            emo_food_result.append(data_emo[i])
+            # time_food_result.append(data_time[i])
+            # emo_food_result.append(data_emo[i])
+        if data_emo[i] < 0.5 and data_type[i] == '2' and 6 <= data_time[i] < 10:
+            lat_life_result.append(data_lat[i])
+            lon_life_result.append(data_lon[i])
+            emo_life_result.append(data_emo[i])
+            # time_life_result.append(data_time[i])
+            # emo_life_result.append(data_emo[i])
+        if data_emo[i] < 0.5 and data_type[i] == '3' and 6 <= data_time[i] < 10:
+            lat_school_result.append(data_lat[i])
+            lon_school_result.append(data_lon[i])
+            emo_school_result.append(data_emo[i])
+            # time_school_result.append(data_time[i])
+            # emo_school_result.append(data_emo[i])
+        if data_emo[i] < 0.5 and data_type[i] == '4' and 6 <= data_time[i] < 10:
+            lat_outdoor_result.append(data_lat[i])
+            lon_outdoor_result.append(data_lon[i])
+            emo_outdoor_result.append(data_emo[i])
+            # time_outdoor_result.append(data_time[i])
+            # emo_outdoor_result.append(data_emo[i])
+        if data_emo[i] < 0.5 and data_type[i] == '5' and 6 <= data_time[i] < 10:
+            lat_entertainment_result.append(data_lat[i])
+            lon_entertainment_result.append(data_lon[i])
+            emo_entertainment_result.append(data_emo[i])
+            # time_entertainment_result.append(data_time[i])
+            # emo_entertainment_result.append(data_emo[i])
+        if data_emo[i] < 0.5 and data_type[i] == '6' and 6 <= data_time[i] < 10:
+            lat_travel_result.append(data_lat[i])
+            lon_travel_result.append(data_lon[i])
+            emo_travel_result.append(data_emo[i])
+            # time_travel_result.append(data_time[i])
+            # emo_travel_result.append(data_emo[i])
+    return lat_food_result, lon_food_result,emo_food_result, lat_life_result, lon_life_result,emo_life_result, \
+           lat_school_result, lon_school_result,emo_school_result, lat_outdoor_result, lon_outdoor_result, emo_outdoor_result,\
+           lat_entertainment_result, lon_entertainment_result,emo_entertainment_result, lat_travel_result, lon_travel_result,emo_travel_result
+
+
+if __name__=='__main__':
+    lat=[]
+    lon=[]
+    time=[]
+    category=[]
+    emo=[]
+    getData(lat,lon,time,emo,category)
+    lat_food_result, lon_food_result,emo_food_result, lat_life_result, lon_life_result, emo_life_result,\
+    lat_school_result, lon_school_result,emo_school_result, lat_outdoor_result, lon_outdoor_result, emo_outdoor_result,\
+    lat_entertainment_result, lon_entertainment_result, emo_entertainment_result,lat_travel_result, lon_travel_result,emo_travel_result=classes_neutal(lat,lon,time,emo,category)
+
+    '''
+    将一种情绪的6个类别写入excel中
+    '''
+    f = xlwt.Workbook()
+    sheet1 = f.add_sheet('food', cell_overwrite_ok=True)
+    sheet1.write(0,0,"lat")
+    sheet1.write(0,1,"lon")
+    for i in range(len(lat_food_result)):
+        sheet1.write(i+1, 0,lat_food_result[i])
+        sheet1.write(i+1, 1,lon_food_result[i])
+    print "write over food"
+
+    sheet1 = f.add_sheet('life', cell_overwrite_ok=True)
+    sheet1.write(0,0,"lat")
+    sheet1.write(0,1,"lon")
+    for i in range(len(lat_life_result)):
+        sheet1.write(i+1, 0,lat_life_result[i])
+        sheet1.write(i+1, 1,lon_life_result[i])
+    print "write over life"
+
+    sheet1 = f.add_sheet('school', cell_overwrite_ok=True)
+    sheet1.write(0,0,"lat")
+    sheet1.write(0,1,"lon")
+    for i in range(len(lat_school_result)):
+        sheet1.write(i+1, 0,lat_school_result[i])
+        sheet1.write(i+1, 1,lon_school_result[i])
+    print "write over school"
+
+    sheet1 = f.add_sheet('outdoor', cell_overwrite_ok=True)
+    sheet1.write(0,0,"lat")
+    sheet1.write(0,1,"lon")
+    for i in range(len(lat_outdoor_result)):
+        sheet1.write(i+1, 0,lat_outdoor_result[i])
+        sheet1.write(i+1, 1,lon_outdoor_result[i])
+    print "write over outdoor"
+
+    sheet1 = f.add_sheet('entertainment', cell_overwrite_ok=True)
+    sheet1.write(0,0,"lat")
+    sheet1.write(0,1,"lon")
+    for i in range(len(lat_entertainment_result)):
+        sheet1.write(i+1, 0,lat_entertainment_result[i])
+        sheet1.write(i+1, 1,lon_entertainment_result[i])
+    print "write over entertainment"
+
+    sheet1 = f.add_sheet('travel', cell_overwrite_ok=True)
+    sheet1.write(0,0,"lat")
+    sheet1.write(0,1,"lon")
+    for i in range(len(lat_travel_result)):
+        sheet1.write(i+1, 0,lat_travel_result[i])
+        sheet1.write(i+1, 1,lon_travel_result[i])
+    print "write over travel"
+    f.save('F:\\neutal.xls')
+
+    '''
+    将lat、lon以json格式写入txt，用在百度地图可视化
+    '''
+    # out=open('F:\\data_life_html.txt','a')
+    # for i in range(len(lat_life_result)):
+    #     out.writelines('{'+'"lat":' +str(lat_life_result[i])+','+'"lng":'+str(lon_life_result[i])+'}'+',')#+'"count":'+str(emo_food_result[i]*1000)+'}'+',')
+    # print ("write over")
+    # out.close()
+    # out1=open('F:\\data_hot_html.txt','a')
+    # for i in range(len(lat)):
+    #     out1.writelines('{'+'"lat":' +str(lat[i])+','+'"lng":'+str(lon[i])+','+'"count":'+str(emo[i]*1000)+'}'+',')
+    # print ("write over")
+    # out1.close()
+
+    # print len(lat_food_result)," ",len(lon_food_result)
+    # print len(lat_life_result)," ",len(lon_life_result)
+    # print len(lat_school_result)," ",len(lon_school_result)
+    # print len(lat_outdoor_result)," ",len(lon_outdoor_result)
+    # print len(lat_entertainment_result)," ",len(lat_entertainment_result)
+    # print len(lat_travel_result)," ",len(lat_travel_result)
+
+

@@ -1,0 +1,259 @@
+#-*-coding:utf-8 -*-
+'''
+Created on 18-8-3
+@author: minghui_J
+lat、lon、time、emo的聚类
+方法是用emo_score_average
+可视化positive在20：00-24：00
+      negative在6：00-10：00
+      neutal在剩余时间
+      6个类别的位置分布
+'''
+import pymysql
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+def query_all(cur, query):
+    cur.execute(query)
+    return cur.fetchall()
+
+def getData(data_lat,data_lon,data_time,data_emo,data_type):
+    conn = pymysql.connect(host='localhost', port=3306, user='root', passwd='JMHjmh1998', db='weibodata', charset='utf8')
+    cur=conn.cursor()
+    query = 'select lat,lon,score,time,emotion_label,tag_ids from d_new_textEmotion where emotion_label!="None"'
+    arr = query_all(cur,query)
+    cur.close()
+    conn.close()
+    positive=0
+    neutal=0
+    negative=0
+    for key in arr:
+        time=(float(str(key[3]).split(':')[0])) + (float(str(key[3]).split(':')[1]) / 60) + (
+                float(str(key[3]).split(':')[2]) / 3600)
+        if key[4]=='0':
+            if negative==1000:
+                continue
+            data_lat.append(float(key[0]))
+            data_lon.append(float(key[1]))
+            data_time.append(time)
+            data_emo.append(1-float(key[2]))
+            data_type.append(str(key[5]))
+            negative+=1
+        if key[4]=='1':
+            if neutal==1000:
+                continue
+            data_lat.append(float(key[0]))
+            data_lon.append(float(key[1]))
+            data_time.append(time)
+            data_emo.append(float(0.5))
+            data_type.append(str(key[5]))
+            neutal+=1
+        if key[4]=='2':
+            if positive==1000:
+                continue
+            data_lat.append(float(key[0]))
+            data_lon.append(float(key[1]))
+            data_time.append(time)
+            data_emo.append(float(key[2]))
+            data_type.append(str(key[5]))
+            positive+=1
+    return (data_lat,data_lon,data_time,data_emo,data_type)
+
+def classes_positive(data_lat,data_lon,data_time,data_emo,data_type):
+    # lat_x=[]
+    # lon_y=[]
+    # time_z=[]
+    ax = plt.subplot(111)#, projection='3d')
+    for i in range(len(data_lat)):
+        if data_emo[i]>0.5 and data_type[i]=='1' and data_time[i]>20:
+            plot0=ax.scatter(data_lat[i],data_lon[i],color='r',marker='x')#,label='food')
+            # lat_x.append(data_lat[i])
+            # lon_y.append(data_lon[i])
+            # time_z.append(data_time[i])
+        if data_emo[i] > 0.5 and data_type[i] == '2' and data_time[i]>20:
+            plot1=ax.scatter(data_lat[i], data_lon[i], color='g', marker='o')#, label='life')
+        if data_emo[i] > 0.5 and data_type[i] == '3' and data_time[i]>20:
+            plot2=ax.scatter(data_lat[i], data_lon[i],  color='b', marker='v')#, label='school')
+        if data_emo[i] > 0.5 and data_type[i] == '4' and data_time[i]>20:
+            plot3=ax.scatter(data_lat[i], data_lon[i],  color='k', marker='*')#, label='outdoor')
+        if data_emo[i] > 0.5 and data_type[i] == '5' and data_time[i]>20:
+            plot4=ax.scatter(data_lat[i], data_lon[i],  color='c', marker='s')#, label='entertainment')
+        if data_emo[i] > 0.5 and data_type[i] == '6' and data_time[i]>20:
+            plot5=ax.scatter(data_lat[i], data_lon[i],  color='y', marker='_')#, label='travel')
+    plt.title('positive time 20:00-24:00')
+    # plt.legend((plot0,plot1,plot2,plot3,plot4,plot5),('food','life','school','outdoor','entertainment','travel'))
+    plt.show()
+
+def classes_neutal(data_lat,data_lon,data_time,data_emo,data_type):
+    ax = plt.subplot(111)
+    for i in range(len(data_lat)):
+        if data_emo[i]==0.5 and data_type[i]=='1':
+            plot0 = ax.scatter(data_lat[i], data_lon[i], color='r', marker='x')
+        if data_emo[i]==0.5 and data_type[i] == '2':
+            plot1 = ax.scatter(data_lat[i], data_lon[i], color='g', marker='o')
+        if data_emo[i]==0.5 and data_type[i] == '3':
+            plot2 = ax.scatter(data_lat[i], data_lon[i], color='b', marker='v')
+        if data_emo[i]==0.5 and data_type[i] == '4':
+            plot3 = ax.scatter(data_lat[i], data_lon[i], color='k', marker='*')
+        if data_emo[i]==0.5 and data_type[i] == '5':
+            plot4 = ax.scatter(data_lat[i], data_lon[i], color='c', marker='s')
+        if data_emo[i]==0.5 and data_type[i] == '6':
+            plot5 = ax.scatter(data_lat[i], data_lon[i], color='y', marker='_')
+    plt.title('neutal time 00:00-24:00')
+    plt.legend((plot0, plot1, plot2, plot3, plot4, plot5),('food', 'life', 'school', 'outdoor', 'entertainment', 'travel'))
+    plt.show()
+
+def classes_negative(data_lat,data_lon,data_time,data_emo,data_type):
+    # lat_x=[]
+    # lon_y=[]
+    # time_z=[]
+    ax = plt.subplot(111)  # , projection='3d')
+    for i in range(len(data_lat)):
+        if data_emo[i]<0.5 and data_type[i]=='1' and 6<=data_time[i]<10:
+            plot0 = ax.scatter(data_lat[i], data_lon[i], color='r', marker='x')
+        if data_emo[i] < 0.5 and data_type[i] == '2' and 6<=data_time[i]<10:
+            plot1 = ax.scatter(data_lat[i], data_lon[i], color='g', marker='o')
+        if data_emo[i] < 0.5 and data_type[i] == '3' and 6<=data_time[i]<10:
+            plot2 = ax.scatter(data_lat[i], data_lon[i], color='b', marker='v')
+        if data_emo[i] < 0.5 and data_type[i] == '4' and 6<=data_time[i]<10:
+            plot3 = ax.scatter(data_lat[i], data_lon[i], color='k', marker='*')
+        if data_emo[i] < 0.5 and data_type[i] == '5' and 6<=data_time[i]<10:
+            plot4 = ax.scatter(data_lat[i], data_lon[i], color='c', marker='s')
+        if data_emo[i] < 0.5 and data_type[i] == '6' and 6<=data_time[i]<10:
+            plot5 = ax.scatter(data_lat[i], data_lon[i], color='y', marker='_')
+    plt.title('negative time 6:00-10:00')
+    plt.legend((plot0, plot1, plot2, plot3, plot4, plot5),('food', 'life', 'school', 'outdoor', 'entertainment', 'travel'))
+    plt.show()
+
+def pic(data_lat,data_lon,data_time,data_emo,data_type):
+    ax = plt.subplot(131+0)
+    for i in range(len(data_lat)):
+        if data_emo[i] > 0.5 and data_type[i] == '1' and data_time[i] > 20:
+            plot0 = ax.scatter(data_lat[i], data_lon[i], color='r', marker='x')
+        if data_emo[i] > 0.5 and data_type[i] == '2' and data_time[i] > 20:
+            plot1 = ax.scatter(data_lat[i], data_lon[i], color='g', marker='o')
+        if data_emo[i] > 0.5 and data_type[i] == '3' and data_time[i] > 20:
+            plot2 = ax.scatter(data_lat[i], data_lon[i], color='b', marker='v')
+        if data_emo[i] > 0.5 and data_type[i] == '4' and data_time[i] > 20:
+            plot3 = ax.scatter(data_lat[i], data_lon[i], color='k', marker='*')
+        if data_emo[i] > 0.5 and data_type[i] == '5' and data_time[i] > 20:
+            plot4 = ax.scatter(data_lat[i], data_lon[i], color='c', marker='s')
+        if data_emo[i] > 0.5 and data_type[i] == '6' and data_time[i] > 20:
+            plot5 = ax.scatter(data_lat[i], data_lon[i], color='y', marker='_')
+    plt.xlim((30.3, 31))
+    plt.ylim((113.8, 114.8))
+    plt.title('positive time 20:00-24:00')
+    plt.legend((plot0, plot1, plot2, plot3, plot4, plot5),('food', 'life', 'school', 'outdoor', 'entertainment', 'travel'))
+    ax = plt.subplot(131+1)
+    for i in range(len(data_lat)):
+        if data_emo[i] == 0.5 and data_type[i] == '1' and (0<data_time[i]<6 or 10<data_time[i]<20):
+            plot0 = ax.scatter(data_lat[i], data_lon[i], color='r', marker='x')
+        if data_emo[i] == 0.5 and data_type[i] == '2' and (0<data_time[i]<6 or 10<data_time[i]<20):
+            plot1 = ax.scatter(data_lat[i], data_lon[i], color='g', marker='o')
+        if data_emo[i] == 0.5 and data_type[i] == '3' and (0<data_time[i]<6 or 10<data_time[i]<20):
+            plot2 = ax.scatter(data_lat[i], data_lon[i], color='b', marker='v')
+        if data_emo[i] == 0.5 and data_type[i] == '4' and (0<data_time[i]<6 or 10<data_time[i]<20):
+            plot3 = ax.scatter(data_lat[i], data_lon[i], color='k', marker='*')
+        if data_emo[i] == 0.5 and data_type[i] == '5' and (0<data_time[i]<6 or 10<data_time[i]<20):
+            plot4 = ax.scatter(data_lat[i], data_lon[i], color='c', marker='s')
+        if data_emo[i] == 0.5 and data_type[i] == '6' and (0<data_time[i]<6 or 10<data_time[i]<20):
+            plot5 = ax.scatter(data_lat[i], data_lon[i], color='y', marker='_')
+    plt.xlim((30.3, 31))
+    plt.ylim((113.8, 114.8))
+    plt.title('neutal time')
+    plt.legend((plot0, plot1, plot2, plot3, plot4, plot5),('food', 'life', 'school', 'outdoor', 'entertainment', 'travel'))
+    ax = plt.subplot(131+2)
+    for i in range(len(data_lat)):
+        if data_emo[i]<0.5 and data_type[i]=='1' and 6<=data_time[i]<10:
+            plot0 = ax.scatter(data_lat[i], data_lon[i], color='r', marker='x')
+        if data_emo[i] <0.5 and data_type[i] == '2' and 6<=data_time[i]<10:
+            plot1 = ax.scatter(data_lat[i], data_lon[i], color='g', marker='o')
+        if data_emo[i] < 0.5 and data_type[i] == '3' and 6<=data_time[i]<10:
+            plot2 = ax.scatter(data_lat[i], data_lon[i], color='b', marker='v')
+        if data_emo[i] < 0.5 and data_type[i] == '4' and 6<=data_time[i]<10:
+            plot3 = ax.scatter(data_lat[i], data_lon[i], color='k', marker='*')
+        if data_emo[i] < 0.5 and data_type[i] == '5' and 6<=data_time[i]<10:
+            plot4 = ax.scatter(data_lat[i], data_lon[i], color='c', marker='s')
+        if data_emo[i] < 0.5 and data_type[i] == '6' and 6<=data_time[i]<10:
+            plot5 = ax.scatter(data_lat[i], data_lon[i], color='y', marker='_')
+    plt.xlim((30.3, 31))
+    plt.ylim((113.8, 114.8))
+    plt.title('negative time 6:00-10:00')
+    plt.legend((plot0, plot1, plot2, plot3, plot4, plot5),('food', 'life', 'school', 'outdoor', 'entertainment', 'travel'))
+    plt.show()
+
+def Axes3Dpic_positive(data_lat,data_lon,data_time,data_emo,data_type):
+    ax = plt.subplot(111, projection='3d')
+    for i in range(len(data_lat)):
+        if data_emo[i]>0.5 and data_type[i]=='1':
+            plot0 = ax.scatter(data_lat[i], data_lon[i],data_time[i], color='r', marker='x',alpha=0.1)
+        if data_emo[i] > 0.5 and data_type[i] == '2':
+            plot1 = ax.scatter(data_lat[i], data_lon[i],data_time[i], color='g', marker='o',alpha=0.1)
+        if data_emo[i] > 0.5 and data_type[i] == '3':
+            plot2 = ax.scatter(data_lat[i], data_lon[i],data_time[i], color='b', marker='v',alpha=0.1)
+        if data_emo[i] > 0.5 and data_type[i] == '4':
+            plot3 = ax.scatter(data_lat[i], data_lon[i], data_time[i],color='k', marker='*',alpha=0.1)
+        if data_emo[i] > 0.5 and data_type[i] == '5':
+            plot4 = ax.scatter(data_lat[i], data_lon[i],data_time[i], color='c', marker='s',alpha=0.1)
+        if data_emo[i] > 0.5 and data_type[i] == '6':
+            plot5 = ax.scatter(data_lat[i], data_lon[i],data_time[i], color='y', marker='_',alpha=0.1)
+    plt.title('positive 3D')
+    plt.legend((plot0, plot1, plot2, plot3, plot4, plot5),('food', 'life', 'school', 'outdoor', 'entertainment', 'travel'))
+    plt.show()
+
+def Axes3Dpic_neutal(data_lat,data_lon,data_time,data_emo,data_type):
+    ax = plt.subplot(111, projection='3d')
+    for i in range(len(data_lat)):
+        if data_emo[i] == 0.5 and data_type[i] == '1':
+            plot0 = ax.scatter(data_lat[i], data_lon[i], data_time[i],color='r', marker='x')
+        if data_emo[i] == 0.5 and data_type[i] == '2':
+            plot1 = ax.scatter(data_lat[i], data_lon[i], data_time[i],color='g', marker='o')
+        if data_emo[i] == 0.5 and data_type[i] == '3':
+            plot2 = ax.scatter(data_lat[i], data_lon[i], data_time[i],color='b', marker='v')
+        if data_emo[i] == 0.5 and data_type[i] == '4':
+            plot3 = ax.scatter(data_lat[i], data_lon[i], data_time[i],color='k', marker='*')
+        if data_emo[i] == 0.5 and data_type[i] == '5':
+            plot4 = ax.scatter(data_lat[i], data_lon[i], data_time[i],color='c', marker='s')
+        if data_emo[i] == 0.5 and data_type[i] == '6':
+            plot5 = ax.scatter(data_lat[i], data_lon[i], data_time[i],color='y', marker='_')
+    plt.title('neutal 3D')
+    plt.legend((plot0, plot1, plot2, plot3, plot4, plot5),('food', 'life', 'school', 'outdoor', 'entertainment', 'travel'))
+    plt.show()
+
+def Axes3Dpic_negative(data_lat,data_lon,data_time,data_emo,data_type):
+    ax = plt.subplot(111 , projection='3d')
+    for i in range(len(data_lat)):
+        if data_emo[i]<0.5 and data_type[i]=='1':
+            plot0 = ax.scatter(data_lat[i], data_lon[i],data_time[i], color='r', marker='x')
+        if data_emo[i] < 0.5 and data_type[i] == '2':
+            plot1 = ax.scatter(data_lat[i], data_lon[i],data_time[i], color='g', marker='o')
+        if data_emo[i] < 0.5 and data_type[i] == '3':
+            plot2 = ax.scatter(data_lat[i], data_lon[i],data_time[i], color='b', marker='v')
+        if data_emo[i] < 0.5 and data_type[i] == '4':
+            plot3 = ax.scatter(data_lat[i], data_lon[i],data_time[i], color='k', marker='*')
+        if data_emo[i] < 0.5 and data_type[i] == '5':
+            plot4 = ax.scatter(data_lat[i], data_lon[i],data_time[i], color='c', marker='s')
+        if data_emo[i] < 0.5 and data_type[i] == '6':
+            plot5 = ax.scatter(data_lat[i], data_lon[i],data_time[i], color='y', marker='_')
+    plt.title('negative 3D')
+    plt.legend((plot0, plot1, plot2, plot3, plot4, plot5),('food', 'life', 'school', 'outdoor', 'entertainment', 'travel'))
+    plt.show()
+
+if __name__=='__main__':
+    lat=[]
+    lon=[]
+    time=[]
+    category=[]
+    emo=[]
+    getData(lat,lon,time,emo,category)
+    # classes_positive(lat,lon,time,emo,category)
+    # classes_neutal(lat, lon, time, emo, category)
+    # classes_negative(lat, lon, time, emo, category)
+
+
+    pic(lat, lon, time, emo, category)
+
+    # Axes3Dpic_positive(lat, lon, time, emo, category)
+    # Axes3Dpic_neutal(lat, lon, time, emo, category)
+    # Axes3Dpic_negative(lat, lon, time, emo, category)

@@ -1,6 +1,6 @@
 #-*-coding:utf-8 -*-
 '''
-Created on 18-8-4
+Created on 18-8-3
 @author: minghui_J
 lat、lon、time、emo的聚类
 方法是用emo_score_average

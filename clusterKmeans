@@ -1,0 +1,194 @@
+# -*- coding=utf-8 -*-
+'''
+Created on 18-8-5
+@author: minghui_J
+time和emo的聚类
+自己写的kmeans
+可以改计算距离公式
+'''
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+import random
+import matplotlib.pyplot as plt
+import pymysql
+
+'''计算距离'''
+def calcDis(data,clu,k):
+    clalist=[]  #存放计算距离后的list
+    data=data.tolist()  #转化为列表
+    clu=clu.tolist()
+    for i in range(len(data)):
+        clalist.append([])
+        for j in range(k):
+            dist=abs((((data[i][0]-clu[j][0])**2+(data[i][1]-clu[j][1])**2)**0.5))
+            clalist[i].append(dist)
+    clalist=np.array(clalist)   #转化为数组
+    return clalist
+
+'''分组'''
+def group(data,clalist,raw_data,k):
+    grouplist=[]    #存放分组后的集群
+    raw_grouplist=[]
+    claList=clalist.tolist()
+    data=data.tolist()
+    raw_data=raw_data.tolist()
+    for i in range(k):
+        #确定要分组的个数，以空列表的形式，方便下面进行数据的插入
+        grouplist.append([])
+        raw_grouplist.append([])
+    for j in range(len(claList)):
+        sortNum=np.argsort(claList[j])
+        grouplist[sortNum[0]].append(data[j][:])
+        raw_grouplist[sortNum[0]].append(raw_data[j][:])
+    grouplist=np.array(grouplist)
+    raw_grouplist=np.array(raw_grouplist)
+    return grouplist,raw_grouplist
+
+'''计算质心'''
+def calcCen(data,grouplist,k):
+    clunew=[]
+    data=data.tolist()
+    grouplist=grouplist.tolist()
+    for i in range(k):
+        #计算每个组的新质心
+        sumx=0
+        sumy=0
+        for j in range(len(grouplist[i])):
+            sumx+=grouplist[i][j][0]
+            sumy+=grouplist[i][j][1]
+        clunew.append([round(sumx/len(grouplist[i]),1),round(sumy/len(grouplist[i]),1)])
+    clunew=np.array(clunew)
+    return clunew
+
+'''优化质心'''
+def classify(data,clu,raw_data,k):
+    clalist=calcDis(data,clu,k) #计算样本到质心的距离
+    grouplist,raw_grouplist=group(data,clalist,raw_data,k) #分组
+    for i in range(k):
+        #替换空值
+        if grouplist[i]==[]:
+            grouplist[i]=[[random.uniform(0, 5),random.uniform(0, 5)]]
+    clunew=calcCen(data,grouplist,k)
+    sse=clunew-clu
+    # print "the clu is :%r\nthe group is :%r\nthe clunew is :%r\nthe sse is :%r" %(clu,grouplist,clunew,sse)
+    return sse,clunew,data,k,grouplist,raw_grouplist
+
+
+
+def query_all(cur, query):
+    cur.execute(query)
+    return cur.fetchall()
+
+
+def getData(data_lat,data_lon,data_time,data_emo,data_type):
+    conn = pymysql.connect(host='localhost', port=3306, user='root', passwd='JMHjmh1998', db='weibodata', charset='utf8')
+    cur=conn.cursor()
+    query = 'select lat,lon,score,time,emotion_label,tag_ids from d_new_textEmotion where emotion_label!="None"'
+    arr = query_all(cur,query)
+    cur.close()
+    conn.close()
+    positive=0
+    neutal=0
+    negative=0
+    for key in arr:
+        time=(float(str(key[3]).split(':')[0])) + (float(str(key[3]).split(':')[1]) / 60) + (
+                float(str(key[3]).split(':')[2]) / 3600)
+        if key[4]=='0':
+            if negative==1000:
+                continue
+            data_lat.append(float(key[0]))
+            data_lon.append(float(key[1]))
+            data_time.append(time)
+            data_emo.append(1-float(key[2]))
+            data_type.append(str(key[5]))
+            negative+=1
+        if key[4]=='1':
+            if neutal==1000:
+                continue
+            data_lat.append(float(key[0]))
+            data_lon.append(float(key[1]))
+            data_time.append(time)
+            data_emo.append(float(0.5))
+            data_type.append(str(key[5]))
+            neutal+=1
+        if key[4]=='2':
+            if positive==1000:
+                continue
+            data_lat.append(float(key[0]))
+            data_lon.append(float(key[1]))
+            data_time.append(time)
+            data_emo.append(float(key[2]))
+            data_type.append(str(key[5]))
+            positive+=1
+    # return (data_lat,data_lon,data_time,data_emo,data_type)
+
+def normalization(lat,lon,time):
+    normal_lat=[]
+    normal_lon=[]
+    normal_time=[]
+    for i in range(len(lat)):
+        max_lat=max(lat)
+        min_lat=min(lat)
+        normal_lat.append((float(lat[i]-min_lat))/(float(max_lat-min_lat)))
+        max_lon=max(lon)
+        min_lon=min(lon)
+        normal_lon.append((float(lon[i]-min_lon))/(float(max_lon-min_lon)))
+        max_time=max(time)
+        min_time=min(time)
+        normal_time.append((float(time[i]-min_time))/(float(max_time-min_time)))
+    return normal_lat,normal_lon,normal_time
+
+def useKmeans(time,emo,raw_time,raw_emo,k):
+    data=np.array(list(zip(time,emo))).reshape(len(time),2)
+    raw_data=np.array(list(zip(raw_time,raw_emo))).reshape(len(raw_time),2)
+    clu=random.sample(data[:,:].tolist(),k)    #随机取质心
+    clu=np.array(clu)
+    sse,clunew,data,k,grouplist,raw_grouplist=classify(data,clu,raw_data,k)
+    while np.any(sse!=0):
+        sse,clunew,data,k,grouplist,raw_grouplist=classify(data,clunew,raw_data,k)
+    # print grouplist
+    print raw_grouplist
+    return raw_grouplist
+
+def drawPic(time_result,emo_score,colors,markers,labels,k):
+    ax = plt.subplot(231+k)
+    ax.scatter(time_result,emo_score,color=colors[k],marker=markers[k],label=labels[k])
+    ax.set_ylabel('emo')
+    ax.set_xlabel('time')
+
+def getEmoScore(emo_score):
+    emo_average_score = 0
+    for i in range(len(emo_score)):
+        for key in emo_score[i]:
+            emo_average_score += float(key)
+        emo_average_score /= len(emo_score[i])
+        print "%d emo_average_score" % i, " ", emo_average_score
+        emo_average_score = 0
+
+
+
+if __name__=='__main__':
+    lat=[]
+    lon=[]
+    time=[]
+    category=[]
+    emo=[]
+    getData(lat,lon,time,emo,category)
+    normal_lat,normal_lon,normal_time=normalization(lat,lon,time)
+    grouplist=useKmeans(normal_time,emo,time,emo,k=6)
+    colors=['b', 'g', 'r','c','m','y','k','pink','grey','greenyellow']
+    markers=['o', 's', 'D','v', '^','+','*','|','_','8']
+    labels=['group1','group2','group3','group4','group5','group6','group7','group8','group9','group10']
+    for i in range(len(grouplist)):
+        time_result=[]
+        emo_result=[]
+        for j in range(len(grouplist[i])):
+            time_result.append(grouplist[i][j][0])
+            emo_result.append(grouplist[i][j][1])
+        drawPic(time_result,emo_result,colors,markers,labels,k=i)
+    plt.show()
+
+
+
+
+

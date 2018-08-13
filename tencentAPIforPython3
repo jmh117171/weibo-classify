@@ -1,0 +1,107 @@
+import hashlib
+import time
+import random
+import string
+from urllib.parse import quote
+import requests
+from bs4 import BeautifulSoup
+import json
+import pymysql
+import jieba.posseg as psg
+import jieba.analyse
+
+def curlmd5(src):
+    m = hashlib.md5(src.encode('UTF-8'))
+    # 将得到的MD5值所有字符转换成大写
+    return m.hexdigest().upper()
+
+
+def get_params(plus_item):
+    # 请求时间戳（秒级），用于防止请求重放（保证签名5分钟有效）
+    t = time.time()
+    time_stamp = str(int(t))
+    # 请求随机字符串，用于保证签名不可预测
+    nonce_str = ''.join(random.sample(string.ascii_letters + string.digits, 10))
+    # 应用标志，这里修改成自己的id和key
+    app_id = '2107734011'
+    app_key = 'dEOs0rNSlo3Xlt8W'
+    params = {'app_id': app_id,
+              'time_stamp': time_stamp,
+              'nonce_str': nonce_str,
+              'text': plus_item
+              }
+    sign_before = ''
+    # 要对key排序再拼接
+    for key in sorted(params):
+        # 键值拼接过程value部分需要URL编码，URL编码算法用大写字母，例如%E8。quote默认大写。
+        sign_before += '{}={}&'.format(key, quote(params[key], safe=''))
+        # 将应用密钥以app_key为键名，拼接到字符串sign_before末尾
+    sign_before += 'app_key={}'.format(app_key)
+    # 对字符串sign_before进行MD5运算，得到接口请求签名
+    sign = curlmd5(sign_before)
+    params = 'app_id=' + app_id + '&time_stamp=' + str(time_stamp) + '&nonce_str=' + nonce_str + '&sign=' + sign + '&text=' + plus_item
+    print (params)
+    return params
+
+def get_content(plus_item):
+    url = "https://api.ai.qq.com/fcgi-bin/nlp/nlp_textpolar"  # API地址
+    params = get_params(plus_item)#获取请求参数
+    url = url + '?' + params  # 请求地址拼接
+    try:
+        r = requests.get(url)
+        soup = BeautifulSoup(r.text, 'lxml')
+        allcontents=soup.select('body')[0].text.strip()
+        allcontents_json=json.loads(allcontents)#str转成dict
+    except Exception:
+        print ('a')
+        return (2,2,2)
+    return allcontents_json["data"]["polar"],allcontents_json["data"]["confd"],allcontents_json["data"]["text"]
+
+def query_all(cur, query):
+    cur.execute(query)
+    return cur.fetchall()
+def insert(cur,sql,args):
+    cur.execute(sql,args)
+
+if __name__=='__main__':
+    # polar, confd, text = get_content('奇葩的跨年额也只有我们才在大半夜的压马路烟花没看成孔明灯倒是看了不少除了人还是人还好找了个好地当成暖被窝勉强度过漫漫长夜吧2015年希望')
+    # print ('情感倾向：' + str(polar) + '\n' + '程度：' + str(confd) + '\n' + '文本：' + str(text))
+    conn = pymysql.connect(host='localhost', port=3306, user='root', passwd='JMHjmh1998', db='weibodata',charset='utf8')
+    cur = conn.cursor()
+    query = 'select text,id from d_new_tencentemo'
+    arr = query_all(cur, query)
+    j=0
+    for key in arr:
+        if j>=0:
+            line = ''
+            text=" ".join(str(key[0]).split(" ")[:-1])
+            text=str(text).replace(" ","")
+            for x in psg.cut(text):
+                if not x.flag.startswith('x'):
+                    line += (x.word)
+            # # print line
+            # sen_ana = jieba.analyse.extract_tags(line, 20)
+            # line=''
+            # for word in sen_ana:
+            #     line+=word
+            # print line
+            i=0
+            line1=''
+            for word in line:
+                if i<=65:
+                    line1+=word
+                else:
+                    break
+                i+=1
+            print (line1)
+            result, score,text = get_content(line1)
+            print (result, " ", score, " ", str(j))
+            args = [str(result), str(score), str(key[1])]
+            sql = 'update d_new_tencentemo set emotion_label=%s,degree=%s where id=%s'
+            insert(cur, sql, args=args)
+            conn.commit()
+        j += 1
+
+
+    cur.close()
+    conn.close()
